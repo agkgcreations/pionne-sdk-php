@@ -1,6 +1,6 @@
 {
     "name": "pionne/pionne",
-    "description": "Error monitoring SDK for PHP — Pionne. Works standalone, with Laravel (auto-discover) and with Symfony (event listener).",
+    "description": "Error monitoring SDK for PHP \u2014 Pionne. Works standalone, with Laravel (auto-discover) and with Symfony (event listener).",
     "type": "library",
     "license": "MIT",
     "homepage": "https://pionne.agkgcreations.fr",

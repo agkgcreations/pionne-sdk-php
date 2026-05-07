@@ -51,12 +51,17 @@ final class Pionne
      */
     public static function init(array $options): void
     {
-        if (! isset($options['token']) || ! str_starts_with($options['token'], 'pio_live_')) {
-            if (PHP_SAPI === 'cli' || (defined('PIONNE_DEBUG') && PIONNE_DEBUG)) {
-                fwrite(STDERR, "[Pionne] Missing or invalid token (must start with pio_live_).\n");
+        try {
+            if (! isset($options['token']) || ! self::validateToken($options['token'])) {
+                self::devWarn('Missing or invalid token (expected pio_live_<≥16 chars>, no placeholders).');
+                return;
             }
-            return;
-        }
+            $endpoint = $options['endpoint'] ?? self::DEFAULT_ENDPOINT;
+            $isDev = (getenv('APP_ENV') ?: 'production') !== 'production';
+            if (! self::validateEndpoint($endpoint, $isDev)) {
+                self::devWarn("Refusing non-HTTPS endpoint in production: $endpoint");
+                return;
+            }
 
         $autoContext = $options['autoContext'] ?? true;
         self::$staticContext = $autoContext ? self::gatherStaticContext() : [];
@@ -80,6 +85,51 @@ final class Pionne
         }
         if (self::$config['captureFatals']) {
             register_shutdown_function([self::class, 'handleShutdown']);
+        }
+        } catch (Throwable $e) {
+            // Defensive — a monitoring SDK that crashes the host process
+            // is worse than no monitoring. Swallow + warn in dev only.
+            self::devWarn('init failed silently — monitoring disabled. ' . $e->getMessage());
+            self::$config = null;
+        }
+    }
+
+    /**
+     * Stricter token format guard — minimum entropy + reject obvious
+     * placeholders devs sometimes commit. Mirrors @pionne/* SDKs.
+     */
+    private static function validateToken(mixed $token): bool
+    {
+        if (! is_string($token)) return false;
+        if (! str_starts_with($token, 'pio_live_')) return false;
+        if (strlen($token) < strlen('pio_live_') + 16) return false;
+        $lower = strtolower($token);
+        foreach (['xxx', 'yyy', 'todo', 'fixme', 'replace', 'changeme'] as $bad) {
+            if (str_contains($lower, $bad)) return false;
+        }
+        return true;
+    }
+
+    /**
+     * Refuse non-HTTPS endpoints in production. http:// only allowed for
+     * localhost / *.local in dev.
+     */
+    private static function validateEndpoint(string $endpoint, bool $isDev): bool
+    {
+        $parts = parse_url($endpoint);
+        if ($parts === false || ! isset($parts['scheme'])) return false;
+        if ($parts['scheme'] === 'https') return true;
+        if ($parts['scheme'] !== 'http') return false;
+        if (! $isDev) return false;
+        $host = strtolower($parts['host'] ?? '');
+        return in_array($host, ['localhost', '127.0.0.1', '0.0.0.0', '[::1]'], true)
+            || str_ends_with($host, '.local');
+    }
+
+    private static function devWarn(string $msg): void
+    {
+        if (PHP_SAPI === 'cli' || (defined('PIONNE_DEBUG') && PIONNE_DEBUG)) {
+            fwrite(STDERR, "[Pionne] $msg\n");
         }
     }
 
