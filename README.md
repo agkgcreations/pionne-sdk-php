@@ -104,6 +104,14 @@ Pionne::setTags(?array $tags);
 Pionne::setEnabled(bool $enabled);
 ```
 
+## Rate limit serveur
+
+L'API Pionne cap **600 req/min/token** (= 10/sec) sur tous les endpoints publics (`/ingest`, `/sessions`, `/feedback`). Au-delà → `HTTP 429` avec un header `Retry-After`. Le SDK fait silencieusement échouer (try/catch interne).
+
+Empêche un token leaké, un worker PHP qui throw en boucle, ou un endpoint hammered par un bot, de drainer ton infra ou ton quota mensuel. Pour un site PHP qui sert des milliers de requêtes/sec, **utilise `sampleRate`** (`'sampleRate' => 0.1` envoie 1 event sur 10) pour rester sous le cap par token tout en gardant un signal statistique.
+
+Voir [doc rate limits](https://pionne.agkgcreations.fr/security/rate-limits).
+
 ## License
 
 MIT

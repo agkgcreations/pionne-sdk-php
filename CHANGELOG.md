@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.2 — 2026-05-08
+
+### Documentation
+
+- README : nouveau bloc "Rate limit serveur" qui documente le cap
+  600 req/min/token côté API Pionne (= 10/sec). Recommandation
+  pratique d'utiliser `'sampleRate' => 0.1` sur les sites PHP
+  high-traffic pour rester sous le cap par token tout en gardant
+  un signal statistique. Aucun changement de code SDK.
+
 ## 0.2.0
 
 Pionne backend got a major security hardening pass. The SDK API is unchanged
