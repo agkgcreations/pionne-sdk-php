@@ -22,6 +22,7 @@ final class Pionne
 
     private const SDK_NAME = 'pionne.php';
     private const DEFAULT_ENDPOINT = 'https://pionne.agkgcreations.fr/api/ingest';
+    private const DEFAULT_GEO_ENDPOINT = 'https://ipapi.co/json/';
     private const DEFAULT_MAX_STACK = 50;
 
     /** @var array<string, mixed>|null */
@@ -46,7 +47,9 @@ final class Pionne
      *     userIdAnon?: string,
      *     tags?: array<string, string>,
      *     maxStackFrames?: int,
-     *     beforeSend?: callable
+     *     beforeSend?: callable,
+     *     sendGeography?: bool,
+     *     geographyEndpoint?: string
      * } $options
      */
     public static function init(array $options): void
@@ -78,6 +81,8 @@ final class Pionne
             'tags' => $options['tags'] ?? null,
             'maxStackFrames' => $options['maxStackFrames'] ?? self::DEFAULT_MAX_STACK,
             'beforeSend' => $options['beforeSend'] ?? null,
+            'sendGeography' => $options['sendGeography'] ?? false,
+            'geographyEndpoint' => $options['geographyEndpoint'] ?? self::DEFAULT_GEO_ENDPOINT,
         ];
 
         if (self::$config['captureUncaughtExceptions']) {
@@ -85,6 +90,9 @@ final class Pionne
         }
         if (self::$config['captureFatals']) {
             register_shutdown_function([self::class, 'handleShutdown']);
+        }
+        if (self::$config['sendGeography']) {
+            self::fetchGeography(self::$config['geographyEndpoint']);
         }
         } catch (Throwable $e) {
             // Defensive — a monitoring SDK that crashes the host process
@@ -328,6 +336,67 @@ final class Pionne
             'timezone' => $tz,
             'contexts' => $contexts,
         ];
+    }
+
+    /**
+     * Best-effort IP→geo lookup performed at init time. Mutates
+     * {@see self::$staticContext} so subsequent events carry the location
+     * under `contexts.geo`. Failures are silent — a monitoring SDK must
+     * never crash or stall the host process.
+     *
+     * Uses a short curl timeout (4 s connect+read) so we don't slow down
+     * application bootstrap if the geo provider is unreachable.
+     */
+    private static function fetchGeography(string $endpoint): void
+    {
+        try {
+            $ch = curl_init($endpoint);
+            if ($ch === false) {
+                return;
+            }
+            curl_setopt_array($ch, [
+                CURLOPT_HTTPGET => true,
+                CURLOPT_HTTPHEADER => ['Accept: application/json'],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT => 4,
+                CURLOPT_CONNECTTIMEOUT => 2,
+            ]);
+            $body = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            curl_close($ch);
+            if (! is_string($body) || $code < 200 || $code >= 300) {
+                return;
+            }
+            $decoded = json_decode($body, true);
+            if (! is_array($decoded)) {
+                return;
+            }
+
+            $geo = [];
+            if (isset($decoded['city']) && is_string($decoded['city']) && $decoded['city'] !== '') {
+                $geo['city'] = $decoded['city'];
+            }
+            if (isset($decoded['region']) && is_string($decoded['region']) && $decoded['region'] !== '') {
+                $geo['region'] = $decoded['region'];
+            }
+            if (isset($decoded['country_name']) && is_string($decoded['country_name']) && $decoded['country_name'] !== '') {
+                $geo['country'] = $decoded['country_name'];
+            } elseif (isset($decoded['country']) && is_string($decoded['country']) && $decoded['country'] !== '') {
+                $geo['country'] = $decoded['country'];
+            }
+            if (isset($decoded['country_code']) && is_string($decoded['country_code']) && $decoded['country_code'] !== '') {
+                $geo['country_code'] = $decoded['country_code'];
+            }
+            if (empty($geo)) {
+                return;
+            }
+
+            $contexts = self::$staticContext['contexts'] ?? [];
+            $contexts['geo'] = $geo;
+            self::$staticContext['contexts'] = $contexts;
+        } catch (Throwable) {
+            // Best-effort: silently ignore lookup failures.
+        }
     }
 
     /**

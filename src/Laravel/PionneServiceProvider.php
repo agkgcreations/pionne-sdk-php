@@ -42,6 +42,7 @@ class PionneServiceProvider extends ServiceProvider
             // hook below instead.
             'captureUncaughtExceptions' => false,
             'captureFatals' => true,
+            'sendGeography' => filter_var(env('PIONNE_GEOGRAPHY', false), FILTER_VALIDATE_BOOLEAN),
         ]);
 
         $handler = $app->make(\Illuminate\Contracts\Debug\ExceptionHandler::class);

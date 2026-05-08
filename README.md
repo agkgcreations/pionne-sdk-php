@@ -75,6 +75,25 @@ Pionne::init(['token' => $_ENV['PIONNE_TOKEN']]);
 
 Symfony 6.3+ users can rely on the `#[AsEventListener]` attribute that ships with the listener — autoconfigure will pick it up automatically.
 
+## Geography (opt-in)
+
+Approximate server location (city, region, country) attached to every event,
+just like Sentry. Off by default for privacy — flip `sendGeography` to enable:
+
+```php
+Pionne::init([
+    'token' => 'pio_live_xxx',
+    'sendGeography' => true,
+]);
+```
+
+Resolved once at startup via a free IP→geo lookup (`https://ipapi.co/json/`
+by default), with a 4 s timeout. If the lookup fails the SDK silently keeps
+shipping events without geo. Override the endpoint via `geographyEndpoint`
+if you have your own.
+
+For Laravel, set `PIONNE_GEOGRAPHY=true` in your `.env`.
+
 ## API
 
 ```php
