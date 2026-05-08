@@ -75,6 +75,28 @@ Pionne::init(['token' => $_ENV['PIONNE_TOKEN']]);
 
 Symfony 6.3+ users can rely on the `#[AsEventListener]` attribute that ships with the listener — autoconfigure will pick it up automatically.
 
+## Bundle ID pinning — N/A on PHP
+
+The "Bundle ID" anti-token-theft check on Pionne projects is **mobile only**
+(iOS/Android/RN/Flutter). On Laravel/Symfony, your token lives in `.env`
+(gitignored) or a secrets manager — never in a decompilable binary — so the
+threat doesn't exist. The field is hidden in the mobile dashboard for
+Laravel/Symfony projects; **don't set it manually via the API** — the SDK
+does not send a top-level `app_id`, so a non-null `bundle_id` would 403
+every event. Use `tags` to differentiate deployments instead:
+
+```php
+Pionne::init([
+    'token' => env('PIONNE_TOKEN'),
+    'tags'  => [
+        'deployment' => env('APP_DEPLOYMENT', 'prod'),
+        'region'     => env('AWS_REGION', 'eu-west-3'),
+    ],
+]);
+```
+
+See the [Bundle ID Pinning docs](https://pionne.agkgcreations.fr/security/bundle-id#backends-sans-bundle_id).
+
 ## Geography (opt-in)
 
 Approximate server location (city, region, country) attached to every event,
