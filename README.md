@@ -101,7 +101,7 @@ JSON shape is documented at
 [pionne.agkgcreations.fr/profiling/intro](https://pionne.agkgcreations.fr/profiling/intro).
 
 Heads-up : Excimer requires shared-hosting providers to install the
-PECL extension. On o2switch and Infomaniak it's available on demand.
+PECL extension; check with your hosting provider for availability.
 On a managed host without it, profiling falls back to Symfony's
 `debug:stopwatch`-style manual spans (lighter, less precise).
 
@@ -158,7 +158,7 @@ Pionne::setEnabled(bool $enabled);
 
 ## Rate limit serveur
 
-L'API Pionne cap **600 req/min/token** (= 10/sec) sur tous les endpoints publics (`/ingest`, `/sessions`, `/feedback`). Au-delà → `HTTP 429` avec un header `Retry-After`. Le SDK fait silencieusement échouer (try/catch interne).
+L'API Pionne applique un rate-limit par token sur tous les endpoints publics. Au-delà → `HTTP 429` avec un header `Retry-After`. Le SDK fait silencieusement échouer (try/catch interne).
 
 Empêche un token leaké, un worker PHP qui throw en boucle, ou un endpoint hammered par un bot, de drainer ton infra ou ton quota mensuel. Pour un site PHP qui sert des milliers de requêtes/sec, **utilise `sampleRate`** (`'sampleRate' => 0.1` envoie 1 event sur 10) pour rester sous le cap par token tout en gardant un signal statistique.
 
