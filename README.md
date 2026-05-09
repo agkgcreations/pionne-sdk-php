@@ -75,6 +75,36 @@ Pionne::init(['token' => $_ENV['PIONNE_TOKEN']]);
 
 Symfony 6.3+ users can rely on the `#[AsEventListener]` attribute that ships with the listener — autoconfigure will pick it up automatically.
 
+## Profiling — preview (coming soon)
+
+Continuous-ish CPU profiling is **shipped on `@pionne/react-native@0.8.0`**
+(Hermes sampler). The PHP implementation is on the roadmap and will use
+the [Excimer](https://github.com/wikimedia/excimer) extension (~1 %
+wall-clock overhead, drop-in for FPM and CLI). Excimer's collapsed-stack
+output is already supported by the Pionne backend's aggregator — the SDK
+side is the only missing piece.
+
+The API will mirror RN/Node exactly:
+
+```php
+// Coming in pionne/pionne ~v0.3.0
+Pionne::profile('OrderController::store', function () {
+    $this->dispatch();
+}, ['route' => 'POST /orders']);
+```
+
+Same backend (`POST /api/profiles`), same retention (raw 7 d, aggregates
+90 d), same flame graph view + cross-release regression chart in the
+mobile dashboard. If you want profiling **today** in PHP, install Excimer
+manually and post the collapsed-stack JSON to the endpoint directly — the
+JSON shape is documented at
+[pionne.agkgcreations.fr/profiling/intro](https://pionne.agkgcreations.fr/profiling/intro).
+
+Heads-up : Excimer requires shared-hosting providers to install the
+PECL extension. On o2switch and Infomaniak it's available on demand.
+On a managed host without it, profiling falls back to Symfony's
+`debug:stopwatch`-style manual spans (lighter, less precise).
+
 ## Bundle ID pinning — N/A on PHP
 
 The "Bundle ID" anti-token-theft check on Pionne projects is **mobile only**
