@@ -427,10 +427,64 @@ final class Pionne
                 CURLOPT_TIMEOUT => 5,
                 CURLOPT_CONNECTTIMEOUT => 2,
             ]);
-            curl_exec($ch);
+            $resBody = curl_exec($ch);
+            $code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
             curl_close($ch);
+
+            // 401/403/422 = permanent config issues that retries won't fix.
+            // Surface once per process (even in prod) via error_log so the
+            // dev sees a misconfigured token / bundle / validation in the
+            // PHP error log without having to attach a debugger or
+            // sniff network. Keep silent on 5xx and on transport errors
+            // (curl_exec === false) — those are transient.
+            if (! self::$warnedPermFailure && in_array($code, [401, 403, 422], true)) {
+                self::$warnedPermFailure = true;
+                $rawBody = is_string($resBody) ? $resBody : '';
+                $parsed = json_decode($rawBody, true);
+                $serverMsg = is_array($parsed) && isset($parsed['message']) && is_string($parsed['message'])
+                    ? $parsed['message']
+                    : substr($rawBody, 0, 200);
+                $expectedFormat = is_array($parsed) && isset($parsed['expected_format']) && is_string($parsed['expected_format'])
+                    ? $parsed['expected_format']
+                    : 'unknown';
+                $sentAppId = isset($event['app_id']) && is_string($event['app_id'])
+                    ? $event['app_id']
+                    : '<unset>';
+
+                if ($code === 403 && preg_match('/bundle\s*id/i', $serverMsg)) {
+                    error_log(
+                        "[Pionne] Bundle ID mismatch — your project rejects events from app_id=\"$sentAppId\". " .
+                        "Server expected \"$expectedFormat\" (1st char masked for safety). " .
+                        "Fix it in your Pionne project Settings → Bundle ID, or clear the field to disable the check. " .
+                        'Subsequent rejections will be silent for this session.'
+                    );
+                } elseif ($code === 401) {
+                    error_log(
+                        "[Pionne] Token rejected (401). Check that the project token (starts with \"pio_live_…\") matches. " .
+                        "Server said: $serverMsg. Subsequent rejections will be silent for this session."
+                    );
+                } elseif ($code === 422) {
+                    error_log(
+                        "[Pionne] Event rejected (422 validation): $serverMsg. " .
+                        "Sent app_id=\"$sentAppId\". Subsequent rejections will be silent for this session."
+                    );
+                } else {
+                    error_log(
+                        "[Pionne] Event rejected (status=$code): $serverMsg. " .
+                        "Sent app_id=\"$sentAppId\". Subsequent rejections will be silent for this session."
+                    );
+                }
+            }
         } catch (Throwable) {
             // Best-effort: a monitoring SDK must never crash the host app.
         }
     }
+
+    /**
+     * Module-level flag — gates the permanent-failure warning to one
+     * log per PHP process. PHP-FPM workers reset this on each pool
+     * recycle, which is fine: we want the dev to see the warning at
+     * least once per process lifetime, not on every crash.
+     */
+    private static bool $warnedPermFailure = false;
 }

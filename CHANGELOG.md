@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.3 — 2026-05-10
+
+### Fixed
+
+- **Actionable error message on permanent ingest rejection.** `send()`
+  now reads the cURL response body + status code (previously thrown
+  away), parses the JSON error envelope on 401/403/422, distinguishes
+  the failure modes (Bundle ID mismatch / Token rejected / 422
+  validation), and emits an `error_log()` line (once per process,
+  even in prod) that includes the `app_id` actually sent and the
+  masked `expected_format` returned by the server. Fixes the silent
+  rejection footgun where a misconfigured token or stale bundle
+  pinning would drop events without any visible signal in the PHP
+  error log.
+
 ## 0.3.2 — 2026-05-08
 
 ### Documentation
