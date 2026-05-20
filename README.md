@@ -12,7 +12,7 @@ Pionne is **mobile-first**: you sign up, create projects, and watch your error f
 
 1. **Download the app**:
    - 🍎 [App Store](https://apps.apple.com/app/pionne) *(coming soon)*
-   - 🤖 [Google Play](https://play.google.com/store/apps/details?id=fr.agkgcreations.pionne) *(coming soon)*
+   - 🤖 [Google Play](https://play.google.com/store/apps/details?id=fr.agkgcreations.pionne)
 2. Create your account (30 days free, no card required)
 3. **+ New project** → pick **Laravel** or **Symfony** → copy the token displayed (`pio_live_…`)
 4. Paste it into your `.env` as `PIONNE_TOKEN=…`
