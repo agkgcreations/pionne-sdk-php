@@ -10,7 +10,6 @@
         "crash-reporting",
         "laravel",
         "symfony",
-        "sentry-alternative",
         "observability"
     ],
     "support": {
