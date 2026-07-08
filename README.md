@@ -8,9 +8,9 @@ Includes drop-in integrations for **Laravel** (auto-discover) and **Symfony** (e
 
 ## 🎫 Get your token
 
-Pionne is **mobile-first**: you sign up, create projects, and watch your error feed **from the Pionne mobile app**, not a web dashboard.
+Sign up, create projects, and watch your error feed from the **[web dashboard](https://app.pionne.agkgcreations.fr)** or the **Pionne mobile app**.
 
-1. **Download the app**:
+1. **Open the [web dashboard](https://app.pionne.agkgcreations.fr)** — or download the app:
    - 🍎 [App Store](https://apps.apple.com/app/id6766753270) *(coming soon)*
    - [<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="40"/>](https://play.google.com/store/apps/details?id=fr.agkgcreations.pionne)
 2. Create your account (30 days free, no card required)
